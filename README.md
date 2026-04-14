@@ -9,9 +9,8 @@ You need two things:
 1. **Node.js 22 or later** — check with `node --version`
 2. **The AWS CLI installed and an SSO login session** — if you haven't logged in yet:
    ```bash
-   aws sso login --start-url https://YOUR-ORG.awsapps.com/start
+   aws sso login --start-url https://d-90676bd4b4.awsapps.com/start
    ```
-   Replace the URL with your organization's actual SSO start URL. You can find this in your AWS access portal or ask your admin.
 
 ## Quick start (step by step)
 
@@ -26,7 +25,7 @@ Don't want to install globally? You can use `npx` instead (just prefix every com
 ### Step 2: Preview what it will generate
 
 ```bash
-aws-sso-config-gen --sso-start-url https://YOUR-ORG.awsapps.com/start
+aws-sso-config-gen --sso-start-url https://d-90676bd4b4.awsapps.com/start
 ```
 
 This is a **dry run** — it prints the config to your terminal but does not touch any files. Look through the output and make sure it looks right.
@@ -36,7 +35,7 @@ This is a **dry run** — it prints the config to your terminal but does not tou
 Once you're happy with the preview:
 
 ```bash
-aws-sso-config-gen --sso-start-url https://YOUR-ORG.awsapps.com/start --write
+aws-sso-config-gen --sso-start-url https://d-90676bd4b4.awsapps.com/start --write
 ```
 
 This appends the new profiles to `~/.aws/config`. A timestamped backup is created automatically (e.g. `~/.aws/config.bak.2025-04-14T...`) so you can always roll back.
@@ -55,7 +54,7 @@ That's it. Every account and role you have access to now has a named profile.
 If you have a lot of accounts and only want some of them:
 
 ```bash
-aws-sso-config-gen --sso-start-url https://YOUR-ORG.awsapps.com/start -i --write
+aws-sso-config-gen --sso-start-url https://d-90676bd4b4.awsapps.com/start -i --write
 ```
 
 This opens a checkbox picker in your terminal. Use arrow keys to navigate, space to toggle, `a` to select all, `/` to search/filter, and enter to confirm.
@@ -97,7 +96,7 @@ Existing profiles are left alone. If a generated name matches one you already ha
 
 **"SSO session expired"** — Run `aws sso login` again, then retry.
 
-**"No SSO token found"** — You haven't logged in yet. Run `aws sso login --start-url https://YOUR-ORG.awsapps.com/start` first.
+**"No SSO token found"** — You haven't logged in yet. Run `aws sso login --start-url https://d-90676bd4b4.awsapps.com/start` first.
 
 **"No SSO start URL provided"** — Pass `--sso-start-url` or make sure you have an `[sso-session]` block in your `~/.aws/config`.
 
