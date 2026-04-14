@@ -9,8 +9,9 @@ You need two things:
 1. **Node.js 22 or later** — check with `node --version`
 2. **The AWS CLI installed and an SSO login session** — if you haven't logged in yet:
    ```bash
-   aws sso login --start-url https://d-90676bd4b4.awsapps.com/start
+   aws sso login --sso-session maxfed
    ```
+   If you don't have an `[sso-session maxfed]` block in your `~/.aws/config` yet, run `aws configure sso` once to set one up, then use the command above to log in.
 
 ## Quick start (step by step)
 
@@ -94,9 +95,9 @@ Existing profiles are left alone. If a generated name matches one you already ha
 
 ## Troubleshooting
 
-**"SSO session expired"** — Run `aws sso login` again, then retry.
+**"SSO session expired"** — Run `aws sso login --sso-session maxfed` again, then retry.
 
-**"No SSO token found"** — You haven't logged in yet. Run `aws sso login --start-url https://d-90676bd4b4.awsapps.com/start` first.
+**"No SSO token found"** — You haven't logged in yet. Run `aws sso login --sso-session maxfed` first.
 
 **"No SSO start URL provided"** — Pass `--sso-start-url` or make sure you have an `[sso-session]` block in your `~/.aws/config`.
 
