@@ -1,0 +1,37 @@
+{
+  "name": "aws-sso-config-gen",
+  "version": "1.0.0",
+  "description": "CLI tool to generate AWS CLI config profiles from SSO account discovery",
+  "type": "module",
+  "bin": {
+    "aws-sso-config-gen": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest --run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "aws",
+    "sso",
+    "config",
+    "cli"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-sso": "^3.800.0",
+    "@inquirer/prompts": "^7.5.0",
+    "commander": "^13.1.0",
+    "ini": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/ini": "^4.1.1",
+    "@types/node": "^22.15.0",
+    "fast-check": "^4.1.1",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.1"
+  }
+}
