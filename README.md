@@ -66,8 +66,10 @@ git clone https://github.com/larryoverbeck/aws-sso-config-generator.git
 cd aws-sso-config-generator
 npm install
 npm run build
-npm link
+sudo npm link
 ```
+
+The `sudo` is needed because `npm link` creates a symlink in `/usr/local/lib/node_modules`, which requires admin permissions on macOS.
 
 ### Step 2: Preview what it will generate
 
