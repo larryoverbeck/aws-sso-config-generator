@@ -54,10 +54,20 @@ aws sso login --sso-session maxfed
 ### Step 1: Install the tool
 
 ```bash
-npm install -g aws-sso-config-gen
+npm install -g github:larryoverbeck/aws-sso-config-generator
 ```
 
-Don't want to install globally? You can use `npx` instead (just prefix every command below with `npx`).
+This installs directly from the GitHub repo. It will compile TypeScript and set up the `aws-sso-config-gen` command globally.
+
+Alternatively, clone and install locally:
+
+```bash
+git clone https://github.com/larryoverbeck/aws-sso-config-generator.git
+cd aws-sso-config-generator
+npm install
+npm run build
+npm link
+```
 
 ### Step 2: Preview what it will generate
 
