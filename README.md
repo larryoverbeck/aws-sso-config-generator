@@ -4,14 +4,50 @@ Stop running `aws configure sso` over and over for every account. This tool disc
 
 ## Before you start
 
-You need two things:
+You need three things: Node.js, the AWS CLI, and an active SSO session.
 
-1. **Node.js 22 or later** — check with `node --version`
-2. **The AWS CLI installed and an SSO login session** — if you haven't logged in yet:
-   ```bash
-   aws sso login --sso-session maxfed
-   ```
-   If you don't have an `[sso-session maxfed]` block in your `~/.aws/config` yet, run `aws configure sso` once to set one up, then use the command above to log in.
+### 1. Install Node.js 22 or later
+
+Check with `node --version`. If you don't have it, grab it from [nodejs.org](https://nodejs.org).
+
+### 2. Install the AWS CLI
+
+Check with `aws --version`. If you don't have it, follow the [AWS CLI install guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+
+### 3. Set up your SSO session
+
+If this is your first time, you need to configure an SSO session. Run:
+
+```bash
+aws configure sso
+```
+
+It will ask you a series of questions. Here's what to enter:
+
+```
+SSO session name (Recommended): maxfed
+SSO start URL [None]: https://d-90676bd4b4.awsapps.com/start
+SSO region [None]: us-east-1
+SSO registration scopes [sso:account:access]: (just press Enter)
+```
+
+This opens your browser to authorize. Complete the login in the browser, then come back to the terminal. It will ask you to pick an account and role — just pick any one (it doesn't matter which, we're about to generate all of them). For the remaining prompts:
+
+```
+CLI default client Region [None]: us-east-1
+CLI default output format [None]: json
+CLI profile name [...]: (just press Enter to accept the default)
+```
+
+You now have an SSO session configured. This only needs to be done once.
+
+### 4. Log in
+
+Whenever your session expires, log back in with:
+
+```bash
+aws sso login --sso-session maxfed
+```
 
 ## Quick start (step by step)
 
