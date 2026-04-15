@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { SsoToken } from './types.js';
@@ -14,43 +13,80 @@ export function isTokenExpired(token: SsoToken): boolean {
 /**
  * Reads the cached SSO token for the given `startUrl` from the SSO cache directory.
  *
- * The cache filename is the SHA-1 hex digest of the `startUrl` with a `.json` extension.
+ * Scans all `.json` files in the cache directory and finds the one whose
+ * `startUrl` field matches and that contains a valid `accessToken`.
+ * The AWS CLI v2 does not use a predictable filename scheme, so we check every file.
  *
  * @throws {TokenNotFoundError} if no matching cache file exists or the file is unreadable/malformed
  * @throws {TokenExpiredError} if the token's `expiresAt` is in the past
  */
 export function readCachedToken(ssoCacheDir: string, startUrl: string): SsoToken {
-  const hash = createHash('sha1').update(startUrl).digest('hex');
-  const cacheFile = path.join(ssoCacheDir, `${hash}.json`);
-
-  let raw: string;
+  let files: string[];
   try {
-    raw = fs.readFileSync(cacheFile, 'utf-8');
+    files = fs.readdirSync(ssoCacheDir).filter((f) => f.endsWith('.json'));
   } catch {
     throw new TokenNotFoundError();
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
+  // Find the most recently modified matching token
+  let bestToken: SsoToken | undefined;
+  let bestMtime = 0;
+
+  for (const file of files) {
+    const filePath = path.join(ssoCacheDir, file);
+
+    let raw: string;
+    try {
+      raw = fs.readFileSync(filePath, 'utf-8');
+    } catch {
+      continue;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      continue;
+    }
+
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      typeof (parsed as Record<string, unknown>).accessToken !== 'string' ||
+      typeof (parsed as Record<string, unknown>).expiresAt !== 'string' ||
+      typeof (parsed as Record<string, unknown>).startUrl !== 'string'
+    ) {
+      continue;
+    }
+
+    const candidate = parsed as SsoToken;
+
+    if (candidate.startUrl !== startUrl) {
+      continue;
+    }
+
+    // Pick the most recently modified file in case there are multiple matches
+    try {
+      const stat = fs.statSync(filePath);
+      if (stat.mtimeMs > bestMtime) {
+        bestToken = candidate;
+        bestMtime = stat.mtimeMs;
+      }
+    } catch {
+      // If we can't stat it, still use it if it's the only match
+      if (!bestToken) {
+        bestToken = candidate;
+      }
+    }
+  }
+
+  if (!bestToken) {
     throw new TokenNotFoundError();
   }
 
-  if (
-    typeof parsed !== 'object' ||
-    parsed === null ||
-    typeof (parsed as Record<string, unknown>).accessToken !== 'string' ||
-    typeof (parsed as Record<string, unknown>).expiresAt !== 'string'
-  ) {
-    throw new TokenNotFoundError();
-  }
-
-  const token = parsed as SsoToken;
-
-  if (isTokenExpired(token)) {
+  if (isTokenExpired(bestToken)) {
     throw new TokenExpiredError();
   }
 
-  return token;
+  return bestToken;
 }
