@@ -307,7 +307,10 @@ export function renderWebUI(): string {
     <section class="panel" aria-label="Discovery Panel">
       <div class="panel-header">
         <h2>Discovered Profiles</h2>
-        <input type="text" id="profileSearch" class="name-input" placeholder="Search profiles..." aria-label="Filter discovered profiles" style="margin-top:8px;">
+        <div style="position:relative;margin-top:8px;">
+          <input type="text" id="profileSearch" class="name-input" placeholder="Search profiles..." aria-label="Filter discovered profiles" style="padding-right:30px;">
+          <button type="button" id="clearSearch" aria-label="Clear search" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1.1rem;padding:2px 4px;line-height:1;display:none;">&times;</button>
+        </div>
       </div>
       <div class="panel-body" id="discoveryPanel">
         <div class="loading">Loading profiles...</div>
@@ -325,6 +328,8 @@ export function renderWebUI(): string {
           <h3 class="section-heading">Current Config</h3>
           <label for="currentConfig" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Current AWS config file contents</label>
           <textarea class="config-textarea" id="currentConfig" readonly aria-label="Current AWS config file contents"></textarea>
+
+          <div id="existingProfilesList"></div>
 
           <div style="margin-top:16px; display:flex; gap:8px;">
             <button class="btn btn-primary save-btn-top" id="saveBtnTop" type="button" disabled>Save</button>
@@ -496,6 +501,48 @@ export function renderWebUI(): string {
     function renderConfig() {
       const ta = document.getElementById('currentConfig');
       ta.value = state.existingConfigRaw || 'No existing config found.';
+      renderExistingProfiles();
+    }
+
+    function renderExistingProfiles() {
+      const container = document.getElementById('existingProfilesList');
+      const configured = state.profiles.filter(p => state.existingProfileNames.has(p.profileName));
+      if (configured.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      let html = '<h3 class="section-heading" style="margin-top:16px;">Already Configured (' + configured.length + ')</h3>';
+      for (const p of configured) {
+        const prodBadge = p.isProduction ? '<span class="profile-card-badge badge-prod">\\u26a0\\ufe0f PROD</span>' : '';
+        html += '<div style="padding:6px 10px;margin-bottom:4px;border:1px solid #e2e8f0;border-radius:4px;background:#f1f5f9;display:flex;align-items:center;justify-content:space-between;">'
+          + '<div style="opacity:0.7;">'
+          + '<span style="font-size:0.85rem;font-weight:500;color:#475569;">'+escapeHtml(p.profileName)+prodBadge+'</span>'
+          + '<span style="font-size:0.75rem;color:#94a3b8;margin-left:8px;">'+escapeHtml(p.accountName)+' &mdash; '+escapeHtml(p.roleName)+'</span>'
+          + '</div>'
+          + '<button class="btn-remove" type="button" onclick="deleteProfile(\\''+escapeAttr(p.profileName)+'\\')" aria-label="Delete profile '+escapeAttr(p.profileName)+'" title="Remove from config">\\u00d7</button>'
+          + '</div>';
+      }
+      container.innerHTML = html;
+    }
+
+    async function deleteProfile(profileName) {
+      if (!confirm('Remove profile \\u201c' + profileName + '\\u201d from your config? A backup will be created first.')) return;
+      try {
+        const res = await fetch('/api/delete-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profileName })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showStatus('Removed \\u201c' + profileName + '\\u201d. Backup: ' + (data.backupPath || 'none'), 'success');
+          await loadData();
+        } else {
+          showStatus(data.error || 'Delete failed.', 'error');
+        }
+      } catch (e) {
+        showStatus('Failed to delete. Check that the server is still running.', 'error');
+      }
     }
 
     function showStatus(msg, type) {
@@ -748,7 +795,18 @@ export function renderWebUI(): string {
     document.getElementById('doneBtn').addEventListener('click', shutdown);
     document.getElementById('configTabBtn').addEventListener('click', () => switchTab('configTab'));
     document.getElementById('backupTabBtn').addEventListener('click', () => switchTab('backupTab'));
-    document.getElementById('profileSearch').addEventListener('input', () => renderDiscovery());
+    document.getElementById('profileSearch').addEventListener('input', () => {
+      const btn = document.getElementById('clearSearch');
+      btn.style.display = document.getElementById('profileSearch').value ? 'block' : 'none';
+      renderDiscovery();
+    });
+    document.getElementById('clearSearch').addEventListener('click', () => {
+      const input = document.getElementById('profileSearch');
+      input.value = '';
+      document.getElementById('clearSearch').style.display = 'none';
+      input.focus();
+      renderDiscovery();
+    });
 
     loadData();
   </script>

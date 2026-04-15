@@ -276,6 +276,79 @@ export function startWebServer(options: WebServerOptions): Promise<WebServerHand
         return;
       }
 
+      // POST /api/delete-profile — remove a profile from config
+      if (method === 'POST' && pathname === '/api/delete-profile') {
+        let body: string;
+        let parsed: unknown;
+        try {
+          body = await readBody(req);
+          parsed = JSON.parse(body);
+        } catch {
+          sendJson(res, 400, { success: false, error: 'Invalid request' });
+          return;
+        }
+
+        const payload = parsed as { profileName?: string };
+        if (!payload || typeof payload.profileName !== 'string' || !payload.profileName) {
+          sendJson(res, 400, { success: false, error: 'Missing profileName' });
+          return;
+        }
+
+        const profileToDelete = payload.profileName;
+
+        try {
+          // Read current config
+          const raw = fs.readFileSync(configPath, 'utf-8');
+
+          // Create backup before modifying
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '');
+          const backupFilePath = `${configPath}.bak.${timestamp}`;
+          fs.copyFileSync(configPath, backupFilePath);
+
+          // Remove the [profile <name>] section by parsing lines
+          const lines = raw.split('\n');
+          const result: string[] = [];
+          let skipping = false;
+          const sectionHeader = `[profile ${profileToDelete}]`;
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed === sectionHeader) {
+              skipping = true;
+              // Also remove a preceding blank line if the last result line is empty
+              if (result.length > 0 && result[result.length - 1].trim() === '') {
+                result.pop();
+              }
+              continue;
+            }
+            if (skipping && trimmed.startsWith('[')) {
+              skipping = false;
+            }
+            if (!skipping) {
+              result.push(line);
+            }
+          }
+
+          // Write updated config
+          fs.writeFileSync(configPath, result.join('\n'), 'utf-8');
+
+          // Re-read config to update stored state
+          existingConfig = parseExistingConfig(configPath);
+
+          sendJson(res, 200, {
+            success: true,
+            deletedProfile: profileToDelete,
+            backupPath: backupFilePath,
+          });
+        } catch (err: unknown) {
+          sendJson(res, 500, {
+            success: false,
+            error: `Cannot delete profile: ${(err as Error).message}`,
+          });
+        }
+        return;
+      }
+
       // POST /api/shutdown — graceful shutdown
       if (method === 'POST' && pathname === '/api/shutdown') {
         sendJson(res, 200, { ok: true });
