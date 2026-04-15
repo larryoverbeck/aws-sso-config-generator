@@ -268,6 +268,17 @@ Sessions expire after ~4 hours. You'll see `The SSO session has expired or is in
 aws sso login --sso-session maxfed
 ```
 
+### Using profiles in VS Code / Kiro
+
+If you have the [AWS Toolkit extension](https://marketplace.visualstudio.com/items?itemName=AmazonWebServices.aws-toolkit-vscode) installed, it automatically picks up all profiles from `~/.aws/config`. You can switch profiles several ways:
+
+- Click the **AWS profile** in the status bar (bottom of the editor) to switch
+- Open the command palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and search for **AWS: Choose AWS Profile**
+- In the **AWS sidebar panel**, click the `...` menu on the Explorer section — you'll see **Add New Connection**, **Switch Connections**, and **Sign Out**
+- The Explorer shows which profile you're connected to (e.g., "Connected with profile:macp-sandbox") and gives you access to CloudFormation, CDK, and other AWS resources directly in the editor
+
+The active profile shows in the status bar so you always know which account you're working against.
+
 ## Troubleshooting
 
 **"SSO session expired"** — Run `aws sso login --sso-session maxfed` again, then retry.
