@@ -55,6 +55,8 @@ export interface ExistingConfig {
   raw: string;
   profileNames: Set<string>;
   sessionNames: Set<string>;
+  /** Map of profile name → sso_account_id (when present in the profile section). */
+  profileAccountIds: Map<string, string>;
 }
 
 /** A profile that was skipped during config generation. */

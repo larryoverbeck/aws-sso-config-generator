@@ -19,7 +19,7 @@ export function parseExistingConfig(configPath: string): ExistingConfig {
     const code = (err as NodeJS.ErrnoException).code;
 
     if (code === 'ENOENT') {
-      return { raw: '', profileNames: new Set(), sessionNames: new Set() };
+      return { raw: '', profileNames: new Set(), sessionNames: new Set(), profileAccountIds: new Map() };
     }
 
     if (code === 'EACCES') {
@@ -35,25 +35,33 @@ export function parseExistingConfig(configPath: string): ExistingConfig {
 
   const profileNames = new Set<string>();
   const sessionNames = new Set<string>();
+  const profileAccountIds = new Map<string, string>();
 
   try {
     const parsed = ini.parse(raw);
 
     for (const section of Object.keys(parsed)) {
       if (section.startsWith('profile ')) {
-        profileNames.add(section.slice('profile '.length));
+        const name = section.slice('profile '.length);
+        profileNames.add(name);
+        const value = parsed[section];
+        if (value && typeof value === 'object' && typeof value.sso_account_id === 'string') {
+          profileAccountIds.set(name, value.sso_account_id);
+        }
       } else if (section.startsWith('sso-session ')) {
         sessionNames.add(section.slice('sso-session '.length));
       } else if (section === 'default') {
-        // The [default] section is a valid profile name in AWS config
         profileNames.add('default');
+        const value = parsed[section];
+        if (value && typeof value === 'object' && typeof value.sso_account_id === 'string') {
+          profileAccountIds.set('default', value.sso_account_id);
+        }
       }
     }
   } catch {
-    // INI parse failed — emit warning, preserve raw content, return what we can
     const warning = new MalformedConfigWarning(configPath);
     console.warn(warning.message);
   }
 
-  return { raw, profileNames, sessionNames };
+  return { raw, profileNames, sessionNames, profileAccountIds };
 }

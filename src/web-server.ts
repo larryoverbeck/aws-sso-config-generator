@@ -75,6 +75,7 @@ export function startWebServer(options: WebServerOptions): Promise<WebServerHand
           existingConfig: {
             raw: existingConfig.raw,
             profileNames: Array.from(existingConfig.profileNames),
+            profileAccountIds: Object.fromEntries(existingConfig.profileAccountIds ?? new Map()),
           },
           sso: {
             startUrl: ssoStartUrl,

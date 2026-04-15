@@ -377,6 +377,8 @@ export function renderWebUI(): string {
       profiles: [],
       existingProfileNames: new Set(),
       existingConfigRaw: '',
+      existingAccountIds: new Set(),
+      profileAccountIdMap: {},
       sso: {},
       selectedProfiles: new Map(),
       validationErrors: new Map(),
@@ -462,7 +464,7 @@ export function renderWebUI(): string {
 
     function renderProfileCard(p) {
       const isSelected = state.selectedProfiles.has(p.profileName);
-      const isConfigured = state.existingProfileNames.has(p.profileName);
+      const isConfigured = state.existingAccountIds.has(p.accountId);
       const isManualProd = state.prodAccountIds.has(p.accountId);
       let cls = 'profile-card';
       if (isSelected) cls += ' selected';
@@ -528,9 +530,12 @@ export function renderWebUI(): string {
 
     function renderExistingProfiles() {
       const container = document.getElementById('existingProfilesList');
-      const discoveredNames = new Set(state.profiles.map(p => p.profileName));
-      const configured = state.profiles.filter(p => state.existingProfileNames.has(p.profileName));
-      const otherProfiles = Array.from(state.existingProfileNames).filter(name => !discoveredNames.has(name) && name !== 'default');
+      const configured = state.profiles.filter(p => state.existingAccountIds.has(p.accountId));
+      const configuredAccountIds = new Set(configured.map(p => p.accountId));
+      const otherProfiles = Array.from(state.existingProfileNames).filter(name => {
+        const acctId = state.profileAccountIdMap[name];
+        return (!acctId || !configuredAccountIds.has(acctId)) && name !== 'default';
+      });
 
       if (configured.length === 0 && otherProfiles.length === 0) {
         container.innerHTML = '';
@@ -723,6 +728,8 @@ export function renderWebUI(): string {
         state.profiles = data.profiles || [];
         state.existingProfileNames = new Set(data.existingConfig?.profileNames || []);
         state.existingConfigRaw = data.existingConfig?.raw || '';
+        state.profileAccountIdMap = data.existingConfig?.profileAccountIds || {};
+        state.existingAccountIds = new Set(Object.values(state.profileAccountIdMap));
         state.sso = data.sso || {};
         state.prodAccountIds = new Set(prodData.accountIds || []);
         validateAll();
