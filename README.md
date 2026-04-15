@@ -164,6 +164,71 @@ Accounts matching production keywords get a `prod-` prefix and a ⚠️ PROD bad
 | `--cli` | off | Run in terminal-only mode (no web server) |
 | `--web` | on | Run in web mode (default) |
 
+## What your config looks like after setup
+
+```ini
+[sso-session maxfed]
+sso_start_url = https://d-90676bd4b4.awsapps.com/start
+sso_region = us-east-1
+sso_registration_scopes = sso:account:access
+
+[profile macp-sandbox]
+sso_session = maxfed
+sso_account_id = 838706008019
+sso_role_name = MaxFedPowerUser
+region = us-east-1
+output = json
+
+[profile macp-uat]
+sso_session = maxfed
+sso_account_id = 144038225548
+sso_role_name = MaxFedPowerUser
+region = us-east-1
+output = json
+```
+
+The `[sso-session]` block is shared — all profiles reference it, so one login covers everything.
+
+## Verify your profiles
+
+```bash
+aws sts get-caller-identity --profile macp-sandbox
+aws sts get-caller-identity --profile macp-uat
+```
+
+You should see the correct account ID and assumed role for each.
+
+## Daily usage
+
+### Login (once per session, lasts ~4 hours)
+
+```bash
+aws sso login --sso-session maxfed
+```
+
+One login covers all profiles that share the same SSO session.
+
+### Switch between accounts
+
+No re-login needed — just set the profile:
+
+```bash
+# Set for your whole terminal session
+export AWS_PROFILE=macp-sandbox
+aws s3 ls
+
+# Or per-command
+aws s3 ls --profile macp-uat
+```
+
+### Re-login when session expires
+
+Sessions expire after ~4 hours. You'll see `The SSO session has expired or is invalid`. Just run:
+
+```bash
+aws sso login --sso-session maxfed
+```
+
 ## Troubleshooting
 
 **"SSO session expired"** — Run `aws sso login --sso-session maxfed` again, then retry.
