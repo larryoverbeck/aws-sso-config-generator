@@ -817,6 +817,9 @@ export function renderWebUI(): string {
     }
 
     async function shutdown() {
+      if (state.selectedProfiles.size > 0) {
+        if (!confirm('You have ' + state.selectedProfiles.size + ' unsaved profile(s) selected. Shut down anyway?')) return;
+      }
       try {
         await fetch('/api/shutdown', { method: 'POST' });
       } catch (e) {
