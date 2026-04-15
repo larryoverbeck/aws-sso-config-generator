@@ -51,30 +51,21 @@ aws sso login --sso-session maxfed
 
 ## Quick start (step by step)
 
-### Step 1: Install the tool
-
-```bash
-npm install -g github:larryoverbeck/aws-sso-config-generator
-```
-
-This installs directly from the GitHub repo. It will compile TypeScript and set up the `aws-sso-config-gen` command globally.
-
-Alternatively, clone and install locally:
+### Step 1: Clone and build
 
 ```bash
 git clone https://github.com/larryoverbeck/aws-sso-config-generator.git
 cd aws-sso-config-generator
 npm install
 npm run build
-sudo npm link
 ```
 
-The `sudo` is needed because `npm link` creates a symlink in `/usr/local/lib/node_modules`, which requires admin permissions on macOS.
+That's it. No global install, no sudo, no npm link.
 
 ### Step 2: Preview what it will generate
 
 ```bash
-aws-sso-config-gen --sso-start-url https://d-90676bd4b4.awsapps.com/start
+./aws-sso-config-gen --sso-start-url https://d-90676bd4b4.awsapps.com/start
 ```
 
 This is a **dry run** — it prints the config to your terminal but does not touch any files. Look through the output and make sure it looks right.
@@ -84,10 +75,14 @@ This is a **dry run** — it prints the config to your terminal but does not tou
 Once you're happy with the preview:
 
 ```bash
-aws-sso-config-gen --sso-start-url https://d-90676bd4b4.awsapps.com/start --write
+./aws-sso-config-gen --sso-start-url https://d-90676bd4b4.awsapps.com/start --write
 ```
 
 This appends the new profiles to `~/.aws/config`. A timestamped backup is created automatically (e.g. `~/.aws/config.bak.2025-04-14T...`) so you can always roll back.
+
+```bash
+./aws-sso-config-gen --sso-start-url https://d-90676bd4b4.awsapps.com/start --write
+```
 
 ### Step 4: Use your new profiles
 
@@ -103,7 +98,7 @@ That's it. Every account and role you have access to now has a named profile.
 If you have a lot of accounts and only want some of them:
 
 ```bash
-aws-sso-config-gen --sso-start-url https://d-90676bd4b4.awsapps.com/start -i --write
+./aws-sso-config-gen --sso-start-url https://d-90676bd4b4.awsapps.com/start -i --write
 ```
 
 This opens a checkbox picker in your terminal. Use arrow keys to navigate, space to toggle, `a` to select all, `/` to search/filter, and enter to confirm.

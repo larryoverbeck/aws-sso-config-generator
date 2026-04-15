@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Wrapper script — runs the CLI from the project directory.
+# No global install needed. Just: ./aws-sso-config-gen [flags]
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+exec node "$SCRIPT_DIR/dist/cli.js" "$@"
