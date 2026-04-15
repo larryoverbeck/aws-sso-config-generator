@@ -13,6 +13,7 @@ import { selectProfiles } from './tui.js';
 import { startWebServer } from './web-server.js';
 import { openBrowser } from './browser.js';
 import { loadProdAccountIds } from './prod-accounts.js';
+import { execFileSync } from 'node:child_process';
 import type { CliConfig } from './types.js';
 import {
   TokenExpiredError,
@@ -65,6 +66,35 @@ function readStartUrlFromConfig(configPath: string): string | undefined {
   }
 
   return undefined;
+}
+
+/**
+ * Attempt to read a cached SSO token, automatically running `aws sso login`
+ * if the token is expired or not found.
+ */
+function readTokenWithAutoLogin(ssoCacheDir: string, ssoStartUrl: string, sessionName: string): ReturnType<typeof readCachedToken> {
+  try {
+    return readCachedToken(ssoCacheDir, ssoStartUrl);
+  } catch (err) {
+    if (err instanceof TokenExpiredError || err instanceof TokenNotFoundError) {
+      const reason = err instanceof TokenExpiredError ? 'SSO session expired' : 'No SSO token found';
+      console.log(`\n⚠️  ${reason}. Logging in automatically...\n`);
+      console.log(`  Your browser will open — log in with Okta, then click "Allow access" to authorize the CLI.\n`);
+
+      try {
+        execFileSync('aws', ['sso', 'login', '--sso-session', sessionName], {
+          stdio: 'inherit',
+        });
+      } catch {
+        console.error(`\n✖ aws sso login failed. Please run it manually:\n  aws sso login --sso-session ${sessionName}\n`);
+        process.exit(1);
+      }
+
+      // Retry after login
+      return readCachedToken(ssoCacheDir, ssoStartUrl);
+    }
+    throw err;
+  }
 }
 
 /**
@@ -191,7 +221,7 @@ async function runPipeline(opts: Record<string, unknown>): Promise<void> {
 
     // 4. Read cached SSO token
     console.log(`\n🔍 Discovering accounts for ${config.ssoStartUrl} ...\n`);
-    const token = readCachedToken(paths.ssoCacheDir, config.ssoStartUrl);
+    const token = readTokenWithAutoLogin(paths.ssoCacheDir, config.ssoStartUrl, config.sessionName);
 
     // 5. Discover accounts and roles
     const discovery = await discoverAccountsAndRoles(token.accessToken, config.ssoRegion);
@@ -304,7 +334,7 @@ async function runWebMode(opts: Record<string, unknown>): Promise<void> {
 
     // 4. Read cached SSO token
     console.log(`\n🔍 Discovering accounts for ${ssoStartUrl} ...\n`);
-    const token = readCachedToken(paths.ssoCacheDir, ssoStartUrl);
+    const token = readTokenWithAutoLogin(paths.ssoCacheDir, ssoStartUrl, sessionName);
 
     // 5. Discover accounts and roles
     const discovery = await discoverAccountsAndRoles(token.accessToken, ssoRegion);
