@@ -5,6 +5,7 @@ import { renderWebUI } from './web-ui.js';
 import { generateConfigBlocks, writeConfig } from './config-writer.js';
 import { parseExistingConfig } from './config-parser.js';
 import { ConfigWriteError } from './types.js';
+import { loadProdAccountIds, saveProdAccountIds, resolveProdAccountsPath } from './prod-accounts.js';
 import type { GeneratedProfile, ExistingConfig } from './types.js';
 
 export interface WebServerOptions {
@@ -272,6 +273,47 @@ export function startWebServer(options: WebServerOptions): Promise<WebServerHand
             success: false,
             error: `Cannot restore backup: ${(err as Error).message}`,
           });
+        }
+        return;
+      }
+
+      // GET /api/prod-accounts — get manually marked prod account IDs
+      if (method === 'GET' && pathname === '/api/prod-accounts') {
+        const accountIds = loadProdAccountIds();
+        sendJson(res, 200, { accountIds });
+        return;
+      }
+
+      // POST /api/prod-accounts — toggle an account ID as prod
+      if (method === 'POST' && pathname === '/api/prod-accounts') {
+        let body: string;
+        let parsed: unknown;
+        try {
+          body = await readBody(req);
+          parsed = JSON.parse(body);
+        } catch {
+          sendJson(res, 400, { success: false, error: 'Invalid request' });
+          return;
+        }
+
+        const payload = parsed as { accountId?: string; isProd?: boolean };
+        if (!payload || typeof payload.accountId !== 'string' || typeof payload.isProd !== 'boolean') {
+          sendJson(res, 400, { success: false, error: 'Missing accountId or isProd' });
+          return;
+        }
+
+        try {
+          const current = loadProdAccountIds();
+          let updated: string[];
+          if (payload.isProd) {
+            updated = [...new Set([...current, payload.accountId])];
+          } else {
+            updated = current.filter((id) => id !== payload.accountId);
+          }
+          saveProdAccountIds(updated);
+          sendJson(res, 200, { success: true, accountIds: updated });
+        } catch (err: unknown) {
+          sendJson(res, 500, { success: false, error: (err as Error).message });
         }
         return;
       }

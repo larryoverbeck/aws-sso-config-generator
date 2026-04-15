@@ -38,6 +38,7 @@ export interface DiscoveryResult {
 /** Options controlling profile name generation. */
 export interface ProfileNameOptions {
   prodPatterns: string[]; // e.g. ["prod", "production", "prd"]
+  prodAccountIds?: string[]; // manually marked account IDs from prod-accounts.json
 }
 
 /** A generated AWS CLI profile with metadata. */

@@ -149,6 +149,21 @@ export function renderWebUI(): string {
     .badge-prod { background: #fef3c7; color: #92400e; }
     .badge-configured { background: #e2e8f0; color: #475569; }
 
+    .btn-prod-toggle {
+      background: none;
+      border: 1px solid #cbd5e1;
+      border-radius: 3px;
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      cursor: pointer;
+      margin-left: 6px;
+      color: #64748b;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn-prod-toggle:hover { background: #fef3c7; border-color: #92400e; color: #92400e; }
+    .btn-prod-toggle.is-prod { background: #fef3c7; border-color: #92400e; color: #92400e; }
+
     .config-textarea {
       width: 100%;
       min-height: 120px;
@@ -366,7 +381,8 @@ export function renderWebUI(): string {
       selectedProfiles: new Map(),
       validationErrors: new Map(),
       saving: false,
-      saveResult: null
+      saveResult: null,
+      prodAccountIds: new Set()
     };
 
     // ── Sanitization (mirrors naming.ts sanitizeName) ──
@@ -447,6 +463,7 @@ export function renderWebUI(): string {
     function renderProfileCard(p) {
       const isSelected = state.selectedProfiles.has(p.profileName);
       const isConfigured = state.existingProfileNames.has(p.profileName);
+      const isManualProd = state.prodAccountIds.has(p.accountId);
       let cls = 'profile-card';
       if (isSelected) cls += ' selected';
       if (isConfigured) cls += ' disabled';
@@ -455,10 +472,15 @@ export function renderWebUI(): string {
       if (p.isProduction) badges += '<span class="profile-card-badge badge-prod">\\u26a0\\ufe0f PROD</span>';
       if (isConfigured) badges += '<span class="profile-card-badge badge-configured">Configured</span>';
 
+      // Prod toggle — only show if not already prod by pattern matching
+      const prodToggle = !p.isProduction
+        ? '<button class="btn-prod-toggle'+(isManualProd ? ' is-prod' : '')+'" type="button" onclick="event.stopPropagation();toggleProdAccount(\\''+escapeAttr(p.accountId)+'\\', '+(isManualProd ? 'false' : 'true')+')" title="'+(isManualProd ? 'Unmark as production' : 'Mark as production')+'">'+(isManualProd ? '\\u26a0\\ufe0f Prod' : 'Mark Prod')+'</button>'
+        : '';
+
       const clickAttr = isConfigured ? '' : ' onclick="toggleProfile(\\''+escapeAttr(p.profileName)+'\\')" tabindex="0" role="button" aria-pressed="'+isSelected+'"';
 
       return '<div class="'+cls+'"'+clickAttr+'>'
-        + '<div class="profile-card-name">'+escapeHtml(p.profileName)+badges+'</div>'
+        + '<div class="profile-card-name">'+escapeHtml(p.profileName)+badges+prodToggle+'</div>'
         + '<div class="profile-card-details">'+escapeHtml(p.accountName)+' ('+escapeHtml(p.accountId)+') &mdash; '+escapeHtml(p.roleName)+'</div>'
         + '</div>';
     }
@@ -544,6 +566,26 @@ export function renderWebUI(): string {
       }
 
       container.innerHTML = html;
+    }
+
+    async function toggleProdAccount(accountId, isProd) {
+      try {
+        const res = await fetch('/api/prod-accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountId, isProd })
+        });
+        const data = await res.json();
+        if (data.success) {
+          state.prodAccountIds = new Set(data.accountIds || []);
+          showStatus(isProd ? 'Marked account as production.' : 'Unmarked account as production.', 'success');
+          renderDiscovery();
+        } else {
+          showStatus(data.error || 'Failed to update.', 'error');
+        }
+      } catch (e) {
+        showStatus('Failed to update prod accounts.', 'error');
+      }
     }
 
     async function deleteProfile(profileName) {
@@ -672,12 +714,17 @@ export function renderWebUI(): string {
 
     async function loadData() {
       try {
-        const res = await fetch('/api/data');
-        const data = await res.json();
+        const [dataRes, prodRes] = await Promise.all([
+          fetch('/api/data'),
+          fetch('/api/prod-accounts')
+        ]);
+        const data = await dataRes.json();
+        const prodData = await prodRes.json();
         state.profiles = data.profiles || [];
         state.existingProfileNames = new Set(data.existingConfig?.profileNames || []);
         state.existingConfigRaw = data.existingConfig?.raw || '';
         state.sso = data.sso || {};
+        state.prodAccountIds = new Set(prodData.accountIds || []);
         validateAll();
         renderDiscovery();
         renderSelectedProfiles();

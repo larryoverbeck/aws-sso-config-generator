@@ -12,6 +12,7 @@ import { generateConfigBlocks, writeConfig } from './config-writer.js';
 import { selectProfiles } from './tui.js';
 import { startWebServer } from './web-server.js';
 import { openBrowser } from './browser.js';
+import { loadProdAccountIds } from './prod-accounts.js';
 import type { CliConfig } from './types.js';
 import {
   TokenExpiredError,
@@ -204,7 +205,8 @@ async function runPipeline(opts: Record<string, unknown>): Promise<void> {
     }
 
     // 7. Generate profile names
-    let profiles = generateProfileNames(discovery.roles, { prodPatterns: config.prodPatterns });
+    const prodAccountIds = loadProdAccountIds();
+    let profiles = generateProfileNames(discovery.roles, { prodPatterns: config.prodPatterns, prodAccountIds });
 
     // 8. Interactive TUI selection
     if (config.interactive) {
@@ -315,7 +317,8 @@ async function runWebMode(opts: Record<string, unknown>): Promise<void> {
     }
 
     // 6. Generate profile names
-    const profiles = generateProfileNames(discovery.roles, { prodPatterns });
+    const prodAccountIds = loadProdAccountIds();
+    const profiles = generateProfileNames(discovery.roles, { prodPatterns, prodAccountIds });
 
     // 7. Parse existing config
     const existingConfig = parseExistingConfig(paths.configPath);

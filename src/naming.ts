@@ -44,9 +44,13 @@ export function stripCommonSuffixes(permissionSetName: string): string {
 }
 
 /**
- * Case-insensitive substring match of account name against production patterns.
+ * Case-insensitive substring match of account name against production patterns,
+ * or direct match of account ID against manually marked prod account IDs.
  */
-export function isProductionAccount(accountName: string, patterns: string[]): boolean {
+export function isProductionAccount(accountName: string, patterns: string[], accountId?: string, prodAccountIds?: string[]): boolean {
+  if (accountId && prodAccountIds && prodAccountIds.includes(accountId)) {
+    return true;
+  }
   const lower = accountName.toLowerCase();
   return patterns.some((p) => p.length > 0 && lower.includes(p.toLowerCase()));
 }
@@ -80,7 +84,7 @@ export function generateProfileNames(
     const isSingleRole = accountRoles.length === 1;
 
     for (const role of accountRoles) {
-      const isProd = isProductionAccount(role.accountName, options.prodPatterns);
+      const isProd = isProductionAccount(role.accountName, options.prodPatterns, role.accountId, options.prodAccountIds);
       let baseName = sanitizeName(role.accountName);
 
       // Fallback to account ID when sanitized name is empty
