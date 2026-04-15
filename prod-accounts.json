@@ -1,4 +1,9 @@
 {
   "description": "Account IDs manually marked as production. Commit this file to share with your team.",
-  "accountIds": []
+  "accountIds": [
+    "222634368938",
+    "609484815848",
+    "636977715134",
+    "963014700829"
+  ]
 }
