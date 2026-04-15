@@ -2,6 +2,18 @@
 
 Stop running `aws configure sso` over and over for every account. This tool discovers all your AWS SSO accounts and roles in one shot and generates the `~/.aws/config` entries for you.
 
+```mermaid
+flowchart LR
+    A[AWS CLI] -->|aws sso login| B[AWS SSO Portal]
+    B -->|Redirects to| C[Okta]
+    C -->|Authenticate + MFA| D[Okta verifies identity]
+    D -->|SAML token| B
+    B -->|Temporary credentials| A
+    A -->|Cached token| E[aws-sso-config-gen]
+    E -->|Discovers accounts + roles| F[Web UI / CLI]
+    F -->|Writes profiles| G["~/.aws/config"]
+```
+
 ## Before you start
 
 You need three things: Node.js, the AWS CLI, and an active SSO session.
@@ -202,6 +214,20 @@ You should see the correct account ID and assumed role for each.
 
 ## Daily usage
 
+One SSO login gives you access to all accounts your role is assigned to:
+
+```mermaid
+flowchart TD
+    LOGIN["aws sso login --sso-session maxfed"]
+    LOGIN -->|One login covers all profiles| SESSION[SSO Session]
+    SESSION --> S["macp-sandbox"]
+    SESSION --> U["macp-uat"]
+    SESSION --> P["macp-prod"]
+
+    style LOGIN fill:#f9f,stroke:#333
+    style SESSION fill:#bbf,stroke:#333
+```
+
 ### Login (once per session, lasts ~4 hours)
 
 ```bash
@@ -251,6 +277,32 @@ aws sso login --sso-session maxfed
 **"No SSO start URL provided"** — Pass `--sso-start-url` or make sure you have an `[sso-session]` block in your `~/.aws/config`.
 
 **"Cannot write to ~/.aws/config: permission denied"** — Check file permissions, or use `--output /tmp/aws-config` to write somewhere else and copy it manually.
+
+## Quick reference
+
+```mermaid
+flowchart LR
+    subgraph "One-Time Setup"
+        A["aws configure sso"]
+        B["npm install && npm run build"]
+    end
+    subgraph "Generate Profiles"
+        C["./aws-sso-config-gen"]
+    end
+    subgraph "Daily"
+        D["aws sso login\n--sso-session maxfed"]
+    end
+    subgraph "Use"
+        E["AWS_PROFILE=macp-sandbox\naws s3 ls"]
+        F["AWS_PROFILE=macp-uat\naws sts get-caller-identity"]
+    end
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    D --> F
+```
 
 ## Contributing
 
