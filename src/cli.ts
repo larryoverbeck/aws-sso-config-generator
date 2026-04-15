@@ -79,6 +79,7 @@ function readTokenWithAutoLogin(ssoCacheDir: string, ssoStartUrl: string, sessio
     if (err instanceof TokenExpiredError || err instanceof TokenNotFoundError) {
       const reason = err instanceof TokenExpiredError ? 'SSO session expired' : 'No SSO token found';
       console.log(`\n⚠️  ${reason}. Logging in automatically...\n`);
+      console.log(`  Your browser will open — log in with Okta, then click "Allow access" to authorize the CLI.\n`);
 
       try {
         execFileSync('aws', ['sso', 'login', '--sso-session', sessionName], {
