@@ -80,10 +80,6 @@ Once you're happy with the preview:
 
 This appends the new profiles to `~/.aws/config`. A timestamped backup is created automatically (e.g. `~/.aws/config.bak.2025-04-14T...`) so you can always roll back.
 
-```bash
-./aws-sso-config-gen --sso-start-url https://d-90676bd4b4.awsapps.com/start --write
-```
-
 ### Step 4: Use your new profiles
 
 ```bash
