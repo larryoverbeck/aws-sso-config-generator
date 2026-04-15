@@ -216,9 +216,20 @@ No re-login needed — just set the profile:
 # Set for your whole terminal session
 export AWS_PROFILE=macp-sandbox
 aws s3 ls
+aws sts get-caller-identity
 
-# Or per-command
+# Or inline for a single command (no export needed)
+AWS_PROFILE=macp-uat aws s3 ls
+
+# Or with --profile
 aws s3 ls --profile macp-uat
+```
+
+The inline `AWS_PROFILE=<name> command` syntax is handy for one-off commands — the variable only applies to that single command, so you don't need to export or unset anything:
+
+```bash
+AWS_PROFILE=macp-sandbox ./audit.sh --name macp-sandbox --regions us --csv --days 60
+AWS_PROFILE=macp-uat     ./audit.sh --name macp-uat     --regions us --csv --days 60
 ```
 
 ### Re-login when session expires
