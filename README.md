@@ -268,7 +268,7 @@ Sessions expire after ~4 hours. You'll see `The SSO session has expired or is in
 aws sso login --sso-session maxfed
 ```
 
-### Using profiles in VS Code / Kiro
+### Using profiles in VS Code
 
 If you have the [AWS Toolkit extension](https://marketplace.visualstudio.com/items?itemName=AmazonWebServices.aws-toolkit-vscode) installed, it automatically picks up all profiles from `~/.aws/config`. You can switch profiles several ways:
 
