@@ -506,22 +506,43 @@ export function renderWebUI(): string {
 
     function renderExistingProfiles() {
       const container = document.getElementById('existingProfilesList');
+      const discoveredNames = new Set(state.profiles.map(p => p.profileName));
       const configured = state.profiles.filter(p => state.existingProfileNames.has(p.profileName));
-      if (configured.length === 0) {
+      const otherProfiles = Array.from(state.existingProfileNames).filter(name => !discoveredNames.has(name) && name !== 'default');
+
+      if (configured.length === 0 && otherProfiles.length === 0) {
         container.innerHTML = '';
         return;
       }
-      let html = '<h3 class="section-heading" style="margin-top:16px;">Already Configured (' + configured.length + ')</h3>';
-      for (const p of configured) {
-        const prodBadge = p.isProduction ? '<span class="profile-card-badge badge-prod">\\u26a0\\ufe0f PROD</span>' : '';
-        html += '<div style="padding:6px 10px;margin-bottom:4px;border:1px solid #e2e8f0;border-radius:4px;background:#f1f5f9;display:flex;align-items:center;justify-content:space-between;">'
-          + '<div style="opacity:0.7;">'
-          + '<span style="font-size:0.85rem;font-weight:500;color:#475569;">'+escapeHtml(p.profileName)+prodBadge+'</span>'
-          + '<span style="font-size:0.75rem;color:#94a3b8;margin-left:8px;">'+escapeHtml(p.accountName)+' &mdash; '+escapeHtml(p.roleName)+'</span>'
-          + '</div>'
-          + '<button class="btn-remove" type="button" onclick="deleteProfile(\\''+escapeAttr(p.profileName)+'\\')" aria-label="Delete profile '+escapeAttr(p.profileName)+'" title="Remove from config">\\u00d7</button>'
-          + '</div>';
+
+      let html = '';
+
+      if (configured.length > 0) {
+        html += '<h3 class="section-heading" style="margin-top:16px;">Already Configured (' + configured.length + ')</h3>';
+        for (const p of configured) {
+          const prodBadge = p.isProduction ? '<span class="profile-card-badge badge-prod">\\u26a0\\ufe0f PROD</span>' : '';
+          html += '<div style="padding:6px 10px;margin-bottom:4px;border:1px solid #e2e8f0;border-radius:4px;background:#f1f5f9;display:flex;align-items:center;justify-content:space-between;">'
+            + '<div style="opacity:0.7;">'
+            + '<span style="font-size:0.85rem;font-weight:500;color:#475569;">'+escapeHtml(p.profileName)+prodBadge+'</span>'
+            + '<span style="font-size:0.75rem;color:#94a3b8;margin-left:8px;">'+escapeHtml(p.accountName)+' &mdash; '+escapeHtml(p.roleName)+'</span>'
+            + '</div>'
+            + '<button class="btn-remove" type="button" onclick="deleteProfile(\\''+escapeAttr(p.profileName)+'\\')" aria-label="Delete profile '+escapeAttr(p.profileName)+'" title="Remove from config">\\u00d7</button>'
+            + '</div>';
+        }
       }
+
+      if (otherProfiles.length > 0) {
+        html += '<h3 class="section-heading" style="margin-top:16px;">Other Profiles in Config (' + otherProfiles.length + ')</h3>';
+        for (const name of otherProfiles) {
+          html += '<div style="padding:6px 10px;margin-bottom:4px;border:1px solid #e2e8f0;border-radius:4px;background:#f1f5f9;display:flex;align-items:center;justify-content:space-between;">'
+            + '<div style="opacity:0.7;">'
+            + '<span style="font-size:0.85rem;font-weight:500;color:#475569;">'+escapeHtml(name)+'</span>'
+            + '</div>'
+            + '<button class="btn-remove" type="button" onclick="deleteProfile(\\''+escapeAttr(name)+'\\')" aria-label="Delete profile '+escapeAttr(name)+'" title="Remove from config">\\u00d7</button>'
+            + '</div>';
+        }
+      }
+
       container.innerHTML = html;
     }
 
