@@ -307,6 +307,7 @@ export function renderWebUI(): string {
     <section class="panel" aria-label="Discovery Panel">
       <div class="panel-header">
         <h2>Discovered Profiles</h2>
+        <input type="text" id="profileSearch" class="name-input" placeholder="Search profiles..." aria-label="Filter discovered profiles" style="margin-top:8px;">
       </div>
       <div class="panel-body" id="discoveryPanel">
         <div class="loading">Loading profiles...</div>
@@ -325,13 +326,17 @@ export function renderWebUI(): string {
           <label for="currentConfig" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Current AWS config file contents</label>
           <textarea class="config-textarea" id="currentConfig" readonly aria-label="Current AWS config file contents"></textarea>
 
+          <div style="margin-top:16px; display:flex; gap:8px;">
+            <button class="btn btn-primary save-btn-top" id="saveBtnTop" type="button" disabled>Save</button>
+          </div>
+
           <h3 class="section-heading" style="margin-top:16px;">Selected Profiles</h3>
           <div id="selectedProfiles">
             <p class="placeholder-msg">Select profiles from the Discovery Panel to add them here.</p>
           </div>
 
           <div style="margin-top:16px; display:flex; gap:8px;">
-            <button class="btn btn-primary" id="saveBtn" type="button" disabled>Save</button>
+            <button class="btn btn-primary save-btn-bottom" id="saveBtn" type="button" disabled>Save</button>
           </div>
         </div>
 
@@ -405,8 +410,16 @@ export function renderWebUI(): string {
         return;
       }
 
-      const prod = state.profiles.filter(p => p.isProduction);
-      const nonProd = state.profiles.filter(p => !p.isProduction);
+      const term = getSearchTerm();
+      const filtered = state.profiles.filter(p => matchesSearch(p, term));
+
+      if (filtered.length === 0) {
+        panel.innerHTML = '<p class="placeholder-msg">No profiles match your search.</p>';
+        return;
+      }
+
+      const prod = filtered.filter(p => p.isProduction);
+      const nonProd = filtered.filter(p => !p.isProduction);
       let html = '';
 
       if (prod.length > 0) {
@@ -458,9 +471,11 @@ export function renderWebUI(): string {
         const err = state.validationErrors.get(key) || '';
         const errCls = err ? ' error' : '';
         const inputId = 'name-' + escapeAttr(key);
+        const prodBadge = sel.isProduction ? '<span class="profile-card-badge badge-prod">\\u26a0\\ufe0f PROD</span>' : '';
+        const configuredBadge = state.existingProfileNames.has(sanitizeName(sel.customName)) ? '<span class="profile-card-badge badge-configured">Already in config</span>' : '';
         html += '<div class="selected-profile">'
           + '<div class="selected-profile-header">'
-          + '<div class="selected-profile-info">'+escapeHtml(sel.accountName)+' ('+escapeHtml(sel.accountId)+') &mdash; '+escapeHtml(sel.roleName)+'</div>'
+          + '<div class="selected-profile-info">'+escapeHtml(sel.accountName)+' ('+escapeHtml(sel.accountId)+') &mdash; '+escapeHtml(sel.roleName)+prodBadge+configuredBadge+'</div>'
           + '<button class="btn-remove" type="button" onclick="removeProfile(\\''+escapeAttr(key)+'\\')" aria-label="Remove profile '+escapeAttr(sel.customName)+'">\\u00d7</button>'
           + '</div>'
           + '<label for="'+inputId+'" style="font-size:0.78rem;color:#475569;display:block;margin-bottom:2px;">Profile name</label>'
@@ -473,7 +488,9 @@ export function renderWebUI(): string {
     }
 
     function updateSaveBtn() {
-      document.getElementById('saveBtn').disabled = isSaveDisabled();
+      const disabled = isSaveDisabled();
+      document.getElementById('saveBtn').disabled = disabled;
+      document.getElementById('saveBtnTop').disabled = disabled;
     }
 
     function renderConfig() {
@@ -711,11 +728,27 @@ export function renderWebUI(): string {
       return String(str).replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
+    // ── Search / Filter ──
+    function getSearchTerm() {
+      const el = document.getElementById('profileSearch');
+      return el ? el.value.toLowerCase().trim() : '';
+    }
+
+    function matchesSearch(profile, term) {
+      if (!term) return true;
+      return profile.profileName.toLowerCase().includes(term)
+        || profile.accountName.toLowerCase().includes(term)
+        || profile.accountId.includes(term)
+        || profile.roleName.toLowerCase().includes(term);
+    }
+
     // ── Init ──
     document.getElementById('saveBtn').addEventListener('click', save);
+    document.getElementById('saveBtnTop').addEventListener('click', save);
     document.getElementById('doneBtn').addEventListener('click', shutdown);
     document.getElementById('configTabBtn').addEventListener('click', () => switchTab('configTab'));
     document.getElementById('backupTabBtn').addEventListener('click', () => switchTab('backupTab'));
+    document.getElementById('profileSearch').addEventListener('input', () => renderDiscovery());
 
     loadData();
   </script>
