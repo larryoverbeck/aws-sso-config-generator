@@ -10,6 +10,8 @@ import { generateProfileNames } from './naming.js';
 import { parseExistingConfig } from './config-parser.js';
 import { generateConfigBlocks, writeConfig } from './config-writer.js';
 import { selectProfiles } from './tui.js';
+import { startWebServer } from './web-server.js';
+import { openBrowser } from './browser.js';
 import type { CliConfig } from './types.js';
 import {
   TokenExpiredError,
@@ -128,10 +130,16 @@ export function createProgram(): Command {
     .option('--write', 'Write generated config to ~/.aws/config', false)
     .option('--force', 'Overwrite existing profiles', false)
     .option('--output <path>', 'Write generated config to a custom file path')
-    .option('-i, --interactive', 'Launch interactive TUI selection mode', false);
+    .option('-i, --interactive', 'Launch interactive TUI selection mode', false)
+    .option('--cli', 'Run in terminal-only mode (original CLI behavior)', false)
+    .option('--web', 'Run in web mode (default)', false);
 
   program.action(async (opts) => {
-    await runPipeline(opts);
+    if (opts.cli) {
+      await runPipeline(opts);
+    } else {
+      await runWebMode(opts);
+    }
   });
 
   return program;
@@ -250,6 +258,98 @@ async function runPipeline(opts: Record<string, unknown>): Promise<void> {
 
     // 12. Display summary
     printSummary(written, skipped, shouldWrite, outputPath, paths.configPath);
+  } catch (error) {
+    handleError(error);
+  }
+}
+
+/**
+ * Web mode: runs Discovery Pipeline, starts web server, opens browser.
+ */
+async function runWebMode(opts: Record<string, unknown>): Promise<void> {
+  try {
+    // Warn about flags that are ignored in web mode
+    const ignoredFlags: string[] = [];
+    if (opts.write) ignoredFlags.push('--write');
+    if (opts.interactive) ignoredFlags.push('--interactive');
+    if (opts.output) ignoredFlags.push('--output');
+    if (opts.force) ignoredFlags.push('--force');
+
+    if (ignoredFlags.length > 0) {
+      console.warn(`\n⚠️  ${ignoredFlags.join(', ')} ignored in web mode. Use --cli for terminal-only mode.\n`);
+    }
+
+    // 1. Resolve platform paths
+    const paths = resolvePlatformPaths();
+
+    // 2. Determine SSO start URL
+    let ssoStartUrl = opts.ssoStartUrl as string | undefined;
+
+    if (!ssoStartUrl) {
+      ssoStartUrl = readStartUrlFromConfig(paths.configPath);
+    }
+
+    if (!ssoStartUrl) {
+      throw new MissingStartUrlError();
+    }
+
+    // 3. Resolve config
+    const ssoRegion = opts.ssoRegion as string;
+    const sessionName = (opts.sessionName as string | undefined) ?? deriveSessionName(ssoStartUrl);
+    const defaultRegion = opts.defaultRegion as string;
+    const outputFormat = opts.outputFormat as string;
+    const prodPatterns = (opts.prodPatterns as string).split(',').map((s: string) => s.trim());
+
+    // 4. Read cached SSO token
+    console.log(`\n🔍 Discovering accounts for ${ssoStartUrl} ...\n`);
+    const token = readCachedToken(paths.ssoCacheDir, ssoStartUrl);
+
+    // 5. Discover accounts and roles
+    const discovery = await discoverAccountsAndRoles(token.accessToken, ssoRegion);
+
+    console.log(`  Found ${discovery.accounts.length} accounts, ${discovery.roles.length} account-role combinations.\n`);
+
+    if (discovery.roles.length === 0) {
+      console.log('  No roles discovered. Nothing to generate.\n');
+      return;
+    }
+
+    // 6. Generate profile names
+    const profiles = generateProfileNames(discovery.roles, { prodPatterns });
+
+    // 7. Parse existing config
+    const existingConfig = parseExistingConfig(paths.configPath);
+
+    // 8. Start web server
+    const handle = await startWebServer({
+      profiles,
+      existingConfig,
+      configPath: paths.configPath,
+      ssoStartUrl,
+      ssoRegion,
+      sessionName,
+      defaultRegion,
+      outputFormat,
+    });
+
+    console.log(`\n🌐 Web UI available at ${handle.url}\n`);
+
+    // 9. Open browser
+    const opened = openBrowser(handle.url);
+    if (!opened) {
+      console.log(`  Could not open browser automatically. Open ${handle.url} in your browser.\n`);
+    }
+
+    // 10. Wait for server to close (via /api/shutdown or signal)
+    await new Promise<void>((resolve) => {
+      const shutdown = () => {
+        console.log('\n🛑 Shutting down...\n');
+        handle.close().then(resolve).catch(resolve);
+      };
+
+      process.on('SIGINT', shutdown);
+      process.on('SIGTERM', shutdown);
+    });
   } catch (error) {
     handleError(error);
   }
