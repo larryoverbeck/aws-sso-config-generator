@@ -168,7 +168,7 @@ Accounts matching production keywords get a `prod-` prefix and a ⚠️ PROD bad
 
 **"SSO session expired"** — Run `aws sso login --sso-session maxfed` again, then retry.
 
-**"No SSO token found"** — You haven't logged in yet. Run `aws sso login --sso-session maxfed` first.
+**"No SSO token found"** — You haven't logged in yet. Run `aws sso login --sso-session maxfed` first. If that doesn't work, try logging into your SSO portal in the browser, logging out, then running `aws sso login` again — this clears stale browser artifacts that can interfere with token caching.
 
 **"No SSO start URL provided"** — Pass `--sso-start-url` or make sure you have an `[sso-session]` block in your `~/.aws/config`.
 
