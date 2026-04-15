@@ -6,6 +6,8 @@ Stop running `aws configure sso` over and over for every account. This tool disc
 
 You need three things: Node.js, the AWS CLI, and an active SSO session.
 
+- Access to the [Maximus Federal Okta portal](https://maximusfederal.okta.com) with the AWS SSO app assigned to your account (ask your admin if you don't see it)
+
 ### 1. Install Node.js 22 or later
 
 Check with `node --version`. If you don't have it, grab it from [nodejs.org](https://nodejs.org).
@@ -228,8 +230,8 @@ aws s3 ls --profile macp-uat
 The inline `AWS_PROFILE=<name> command` syntax is handy for one-off commands — the variable only applies to that single command, so you don't need to export or unset anything:
 
 ```bash
-AWS_PROFILE=macp-sandbox ./audit.sh --name macp-sandbox --regions us --csv --days 60
-AWS_PROFILE=macp-uat     ./audit.sh --name macp-uat     --regions us --csv --days 60
+AWS_PROFILE=macp-sandbox ./audit.sh  --regions us --csv --days 60
+AWS_PROFILE=macp-uat     ./audit.sh  --regions us --csv --days 60
 ```
 
 ### Re-login when session expires
